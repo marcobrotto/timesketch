@@ -107,7 +107,6 @@ export default {
       if (this.error == 'Please select a file with a valid extension' ) {
         return;
       }
-      alert("why")
       let formData = new FormData()
       formData.append('file', this.form.file)
       formData.append('name', this.form.name)
