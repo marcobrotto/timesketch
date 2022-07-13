@@ -43,24 +43,6 @@ limitations under the License.
             </div>
           </article>
         </div>
-        <div v-if="!error && hMenu">
-          <article class="message is-success mb-0">
-            <div class="message-body">
-              New headers names are correct
-            </div>
-          </article>
-        </div>
-        <div v-if="columnLength() || hMenu">
-          <div v-if="!hSuggestedFlag">
-            <div v-for="h in headers" :key="h.id">
-              <input class="input" type="text" :id="h.id" v-model="h.val">
-            </div>
-          </div>
-          <button @click="showHeaders" class="tag is-info" type="button">
-            <span v-if="hSuggestedFlag">Suggest new headers</span>
-            <span v-else>Hide headers</span>
-          </button>          
-        </div>
       </div>
       <div class="field" v-if="fileName">
         <label class="label">Name</label>
@@ -105,7 +87,7 @@ export default {
     return {
       headers: [], // headers in the CSV 
       hMissing : [], // headers missing in the CSV
-      hMenu : false, // this var is used to show the menu for change the headers
+      headersMapping: {},
       form: {
         name: '',
         file: '',
@@ -113,7 +95,6 @@ export default {
       fileName: '', 
       error: '',
       percentCompleted: 0,
-      hSuggestedFlag: true,
     }
   },
   methods: {
@@ -165,6 +146,14 @@ export default {
       return hMissing;
     },
     setFileName: function(fileList) {
+      // initialize values
+      this.headers = []
+      this.hMissing = []
+      this.headersMapping = {
+        message : null,
+        timestamp_desc : null,
+        datetime : null
+      }
       let fileName = fileList[0].name
       let fileExtension = fileName.split('.')[1]
       this.form.file = fileList[0]
@@ -202,26 +191,11 @@ export default {
                 })
               }
               vueJS.hMissing = vueJS.checkHeaders(headers)
-              if (vueJS.hMissing.length > 0)
+              if (vueJS.hMissing.length > 0){
                 vueJS.error = 'Missing headers: ' + vueJS._data.hMissing.toString()
-                vueJS.hMenu = true
+              }
             }
           }        
-      }
-    },
-    showHeaders: function(){
-      this.hSuggestedFlag = !(this.hSuggestedFlag);
-    },
-    columnLength: function(){
-      let headers = this.headers.map(function(e) {
-        return e.val;
-      });
-      this.hMissing = this.checkHeaders(headers);
-      if(this.hMenu){
-        this.error = 'Missing headers: ' + this._data.hMissing.toString()
-      }
-      if(this.hMissing.length === 0){
-        this.error = '';
       }
     },
   },
