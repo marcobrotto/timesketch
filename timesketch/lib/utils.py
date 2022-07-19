@@ -130,13 +130,15 @@ def validate_indices(indices, datastore):
     return [i for i in indices if datastore.client.indices.exists(index=i)]
 
 
-def read_and_validate_csv(file_handle, delimiter=",", mandatory_fields=None):
+def read_and_validate_csv(file_handle, delimiter=",", mandatory_fields=None, headersMapping=None):
     """Generator for reading a CSV file.
 
     Args:
         file_handle: a file-like object containing the CSV content.
         delimiter: character used as a field separator, default: ','
         mandatory_fields: list of fields that must be present in the CSV header.
+        headersMapping: mapping of the mandatory headers with the exsting one.
+                            This feature is useful only for CSV file
 
     Raises:
         RuntimeError: when there are missing fields.
@@ -149,6 +151,13 @@ def read_and_validate_csv(file_handle, delimiter=",", mandatory_fields=None):
         delimiter = codecs.decode(delimiter, "utf8")
 
     header_reader = pandas.read_csv(file_handle, sep=delimiter, nrows=0)
+
+    if headersMapping:
+        # modify header_reader
+        for key in headersMapping:
+            header_reader.insert(loc = 0, column = key, value = "")
+            # note: this is not a substitution, but it is enough to check if the mandatory header are present
+
     _validate_csv_fields(mandatory_fields, header_reader)
 
     if hasattr(file_handle, "seek"):
@@ -159,6 +168,19 @@ def read_and_validate_csv(file_handle, delimiter=",", mandatory_fields=None):
             file_handle, sep=delimiter, chunksize=DEFAULT_CHUNK_SIZE
         )
         for idx, chunk in enumerate(reader):
+            if headersMapping:
+                # rename colunms according to the mapping
+                for key in headersMapping:
+                    val = headersMapping[key]
+                    newVal = key
+                    oldVal = val[0]
+                    if oldVal == "New header":
+                        # add header and def values
+                        chunk[newVal] = val[1]
+                    else:
+                        # just rename the heade
+                        chunk.rename(columns = {oldVal: newVal}, inplace = True)
+            
             skipped_rows = chunk[chunk["datetime"].isnull()]
             if not skipped_rows.empty:
                 logger.warning(
@@ -249,11 +271,12 @@ def read_and_validate_redline(file_handle):
         yield row_to_yield
 
 
-def read_and_validate_jsonl(file_handle):
+def read_and_validate_jsonl(file_handle, headersMapping=None):
     """Generator for reading a JSONL (json lines) file.
 
     Args:
         file_handle: a file-like object containing the CSV content.
+        headersMapping: not important here (for now)
 
     Raises:
         RuntimeError: if there are missing fields.
