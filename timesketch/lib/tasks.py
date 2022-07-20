@@ -178,8 +178,13 @@ def _set_timeline_status(timeline_id, status, error_msg=None):
         logger.warning("Cannot set status: No such timeline")
         return
 
-    # Check if there is at least one data source that hasn't failed.
+    # Check if there is at least one data source that hasn't failed (i.e., with error_message null).
     multiple_sources = any(not x.error_message for x in timeline.datasources)
+    
+    # check if error_msg is not null and status = fail
+    if error_msg and status=="fail":
+        timeline.set_status(status)
+        timeline.searchindex.set_status(status)
 
     if multiple_sources:
         timeline_status = timeline.get_status.status.lower()

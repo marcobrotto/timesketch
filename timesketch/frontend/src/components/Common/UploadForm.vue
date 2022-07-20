@@ -155,7 +155,8 @@ export default {
             this.error = ""
           }else{
             // there are duplicates in the selection list
-            this.error = "New headers mapping contains duplicates"  
+            //this.error = "New headers mapping contains duplicates"  
+            this.error = ""
           }
         }else{
           // meaning: Exist at least 1 element of allValues that is null or empty

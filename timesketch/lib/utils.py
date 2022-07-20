@@ -130,6 +130,35 @@ def validate_indices(indices, datastore):
     return [i for i in indices if datastore.client.indices.exists(index=i)]
 
 
+def headers_mapping_sanity_check(headers, headersMapping):
+    """Sanity check for headers mapping
+
+    Args:
+        headers: list of headers found in the CSV file
+        headersMapping: mapping of the mandatory headers with the exsting one.
+                            This feature is useful only for CSV file
+    
+    Returns: True if all sanity checks are passed, otherwise, False
+    
+    """
+    # 1. create a hashmap for the exisiting CSV headers
+    headers = set(list(headers))
+    
+    # 2. check if the exisisting value specified in the headersMapping are actually present in the list headers
+    candidateHeaders = [e[0] for e in headersMapping.values() if e[0] != "New header"]
+    for candidate in candidateHeaders:
+        if candidate not in headers:
+            return False
+    
+    # 3. check if two or more mandatory headers are mapped to the same exisiting header
+    l1, l2 = len(candidateHeaders), len(set(candidateHeaders))
+    if l1 > l2:
+        return False
+
+    # 4. other checks? 
+
+    return True
+
 def read_and_validate_csv(file_handle, delimiter=",", mandatory_fields=None, headersMapping=None):
     """Generator for reading a CSV file.
 
@@ -153,7 +182,12 @@ def read_and_validate_csv(file_handle, delimiter=",", mandatory_fields=None, hea
     header_reader = pandas.read_csv(file_handle, sep=delimiter, nrows=0)
 
     if headersMapping:
-        # modify header_reader
+        # sanity check of headersMapping 
+        # e.g., 2 or more mandatory headers are mapped with the same exisiting CSV header
+        if not headers_mapping_sanity_check(header_reader, headersMapping):
+            raise Exception("Headers mapping is wrong: {}".format(headersMapping))
+
+        # modify header_reader with the current headersMapping
         for key in headersMapping:
             header_reader.insert(loc = 0, column = key, value = "")
             # note: this is not a substitution, but it is enough to check if the mandatory header are present
