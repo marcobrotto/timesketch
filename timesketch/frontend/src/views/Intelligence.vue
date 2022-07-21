@@ -109,7 +109,7 @@ limitations under the License.
                     </router-link>
                     <explore-preview
                       style="margin-left: 10px"
-                      :searchQuery="generateOpenSearchQuery(props.row.ioc)"
+                      :searchQuery="generateOpenSearchQuery(props.row.ioc)['q']"
                     ></explore-preview>
                   </b-table-column>
 
@@ -340,6 +340,11 @@ export default {
       if (this.tagMetadata[tag]) {
         return _.extend(tagInfo, this.tagMetadata[tag])
       } else {
+        for (var regex in this.tagMetadata['regexes']) {
+          if (tag.match(regex)) {
+            return _.extend(tagInfo, this.tagMetadata['regexes'][regex])
+          }
+        }
         return _.extend(tagInfo, this.tagMetadata.default)
       }
     },
