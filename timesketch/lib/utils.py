@@ -108,10 +108,9 @@ def _validate_csv_fields(mandatory_fields, data):
         return
 
     raise RuntimeError(
-        "Missing fields in CSV header: {0:s}".format(
-            ",".join(list(mandatory_set.difference(parsed_set)))
+        "Missing fields in CSV header: {}\nFields found: {}".format(
+            ",".join(list(mandatory_set.difference(parsed_set))), ", ".join(list(parsed_set)))
         )
-    )
 
 
 def validate_indices(indices, datastore):
@@ -138,26 +137,37 @@ def headers_mapping_sanity_check(headers, headersMapping):
         headersMapping: mapping of the mandatory headers with the exsting one.
                             This feature is useful only for CSV file
     
-    Returns: True if all sanity checks are passed, otherwise, False
+    Returns: error message if any of the sanity checks fails, otherwise, OK
     
     """
-    # 1. create a hashmap for the exisiting CSV headers
+    # 0. create a hashmap for the exisiting CSV headers
     headers = set(list(headers))
-    
-    # 2. check if the exisisting value specified in the headersMapping are actually present in the list headers
+
+    # 1. The mapping is done only if the mandatory header is missing
+    # 2. and, when a new column is created, a mandatory default value must be set
+    for mandHeader in headersMapping:
+        if mandHeader in headers:
+            return "The mapping is done only if the mandatory header is missing"
+        if (headersMapping[mandHeader][0] == "New header" and 
+                headersMapping[mandHeader][0] == ""):
+            msg = "Error to create new column {}\n".format(mandHeader)
+            msg += "A mandatory default value must be assigned in the headers mapping dictionary"
+            return msg
+
+    # 2. Check if the exisisting value specified in the headersMapping are actually present in the list headers
     candidateHeaders = [e[0] for e in headersMapping.values() if e[0] != "New header"]
     for candidate in candidateHeaders:
         if candidate not in headers:
-            return False
+            return """Value specified in headers mapping ({}), is not present as CSV column: {}""".format(candidate, ", ".join(headers))
     
     # 3. check if two or more mandatory headers are mapped to the same exisiting header
     l1, l2 = len(candidateHeaders), len(set(candidateHeaders))
     if l1 > l2:
-        return False
+        return "2 or more mandatory headers are mapped to the same exisiting CSV headers"
 
     # 4. other checks? 
 
-    return True
+    return "OK"
 
 def read_and_validate_csv(file_handle, delimiter=",", mandatory_fields=None, headersMapping=None):
     """Generator for reading a CSV file.
@@ -184,13 +194,19 @@ def read_and_validate_csv(file_handle, delimiter=",", mandatory_fields=None, hea
     if headersMapping:
         # sanity check of headersMapping 
         # e.g., 2 or more mandatory headers are mapped with the same exisiting CSV header
-        if not headers_mapping_sanity_check(header_reader, headersMapping):
-            raise Exception("Headers mapping is wrong: {}".format(headersMapping))
+        res = headers_mapping_sanity_check(header_reader, headersMapping)
+        if res != "OK":
+            raise Exception("Headers mapping is wrong.\n{}".format(res))
 
         # modify header_reader with the current headersMapping
         for key in headersMapping:
-            header_reader.insert(loc = 0, column = key, value = "")
-            # note: this is not a substitution, but it is enough to check if the mandatory header are present
+            val = headersMapping[key]
+            newVal = key
+            oldVal = val[0]
+            if oldVal == "New header":
+                header_reader.insert(loc=0, column = key, value = "")
+            else:
+                header_reader.rename(columns = {oldVal: newVal}, inplace = True)
 
     _validate_csv_fields(mandatory_fields, header_reader)
 

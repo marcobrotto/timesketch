@@ -186,10 +186,6 @@ def _set_timeline_status(timeline_id, status, error_msg=None):
         timeline.set_status(status)
         timeline.searchindex.set_status(status)
 
-    if error_msg and status=="fail":
-        timeline.set_status(status)
-        timeline.searchindex.set_status(status)
-
     if multiple_sources:
         timeline_status = timeline.get_status.status.lower()
         if timeline_status != "process" and status != "fail":

@@ -55,12 +55,12 @@ limitations under the License.
       <div v-for="(value, key) in hMissing">
         <label v-if="!value">{{key}} </label>
         <select v-if="!value" :name="key" :id="key" v-on:click="getSelection($event)">
+          <option><br>New header</br></option>
           <option v-for="h in headers" :value="h">
             <div v-if="!hMissing[h.val]">
               {{h.val}}
             </div>
           </option>
-          <option>New header</option>
         </select>
       </div>
 
@@ -149,14 +149,13 @@ export default {
 
         // 1. check if mapping is completed, i.e., there are not empty or null field for the mapping
         if(!allValues.some(e => (e==='' || !e))){ 
-          // 2. check if all selected headers are unique (except from 'New Header')
+          // 2. check if all selected headers are unique (except from 'New header')
           allValues = allValues.filter(e => e !== "New header")
           if(allValues.length === new Set(allValues).size){
             this.error = ""
           }else{
             // there are duplicates in the selection list
-            //this.error = "New headers mapping contains duplicates"  
-            this.error = ""
+            this.error = "New headers mapping contains duplicates"  
           }
         }else{
           // meaning: Exist at least 1 element of allValues that is null or empty

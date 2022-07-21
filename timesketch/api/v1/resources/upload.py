@@ -451,7 +451,12 @@ class UploadFileResource(resources.ResourceMixin, Resource):
             form = request.form
 
         # map existing headers with the mandatory ones
-        headersMapping = json.loads(form.get('headersMapping'))
+        res = form.get('headersMapping')
+        if res:
+            headersMapping = json.loads(res)
+        else:
+            headersMapping = None
+        print(headersMapping)
 
         sketch_id = form.get("sketch_id", None)
         if not sketch_id:
