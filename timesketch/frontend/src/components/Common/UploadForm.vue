@@ -415,11 +415,11 @@ export default {
        */
 
       /**
-       * valuesAndHeaders = list of dictionaries. Each entry represent a column in the CSV, i.e.,
+       * valuesAndHeaders = dictionary where
        *  - the key is the header, e.g., "datetime", "file_name"
        *  - the value is an array containing the values of that column
        */
-      let valuesAndHeaders = [];
+      let valuesAndHeaders = {};
       if (this.extension.toLowerCase() === "csv") {
         let values = this.valuesString.map((x) => x.split(this.CSVDelimiter));
         /**
@@ -429,36 +429,26 @@ export default {
          *                | [2022-11-09, file_create, high] |
          *                | [2022-11-09, file_update, low]  |
          */
-
         for (let i = 0; i < this.headers.length; i++) {
           let listValues = [];
           for (let j = 0; j < values.length; j++) {
             listValues.push(values[j][i]); // list values aggregate the information on the columns
           }
-          valuesAndHeaders.push({
-            name: this.headers[i],
-            values: listValues,
-          });
+          valuesAndHeaders[this.headers[i]] = listValues
         }
       } else if (this.extension.toLowerCase() === "jsonl") {
-        let tmpVH = {};
         for (let i = 0; i < this.valuesString.length; i++) {
           for (let header in this.valuesString[i]) {
-            if (header in tmpVH) {
-              tmpVH[header].push(this.valuesString[i][header]);
+            if (header in valuesAndHeaders) {
+              valuesAndHeaders[header].push(this.valuesString[i][header]);
             } else {
-              tmpVH[header] = [this.valuesString[i][header]];
+              valuesAndHeaders[header] = [this.valuesString[i][header]];
             }
           }
         }
-        for (let header in tmpVH) {
-          valuesAndHeaders.push({ name: header, values: tmpVH[header] });
-        }
-        console.log(valuesAndHeaders);
       } else {
-        console.log("JSONL not supported (yet) for this feature");
+        console.log("JSON not supported (yet) for this feature");
       }
-
       let checkedHeaders = this.checkedHeaders;
       return checkedHeaders.sort().map((header) => {
         let color = ""; // CSS property for the displayed column
@@ -466,7 +456,7 @@ export default {
 
         if (this.headers.includes(header)) {
           // case 0: the mandatory header is in the CSV (no mapping required)
-          values = valuesAndHeaders.find((x) => x.name === header).values;
+          values = valuesAndHeaders[header];
           color = this.colors.find((x) => x.name === "blue").value;
         } else {
           // header is missing, need to check to headers mapping
@@ -483,22 +473,17 @@ export default {
             if (extractedMapping.source) {
               if (extractedMapping.source.length === 1) {
                 // case 1
-                values = valuesAndHeaders.find(
-                  (x) => x.name === extractedMapping.source[0]
-                ).values;
+                values = valuesAndHeaders[extractedMapping.source[0]]
               } else {
                 // case 2
-                let listValues = valuesAndHeaders.filter((x) =>
-                  extractedMapping.source.includes(x.name)
-                );
-                for (let i = 0; i < this.numberRows; i++) {
-                  // here we build the value that we will display in the message field
-                  let concatValue = "";
-                  for (let j = 0; j < listValues.length; j++) {
-                    concatValue += listValues[j].name + ": ";
-                    concatValue += listValues[j].values[i] + " | ";
-                  }
-                  values.push(concatValue);
+                let listSources = extractedMapping.source
+                for(let i = 0; i < this.numberRows; i++){
+                  let concatValue = ""
+                  listSources.forEach(source => {
+                    concatValue += source + ": ";
+                    concatValue += valuesAndHeaders[source][i] + " | ";
+                  })
+                  values.push(concatValue)
                 }
               }
             } else {
