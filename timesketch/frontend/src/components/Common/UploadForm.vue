@@ -41,7 +41,7 @@ limitations under the License.
       </div>
 
       <div class="field">
-        <div v-if="extension === 'csv'">
+        <div v-if="extension === 'csv' || extension === 'jsonl'">
           <hr />
 
           <!-- List of button: showHelper, showPreview, addColumnsToPreview -->
@@ -378,7 +378,13 @@ export default {
   },
   computed: {
     headers() {
-      return this.headersString.split(this.CSVDelimiter);
+      let headers = [];
+      if (this.extension === "csv") {
+        headers = this.headersString.split(this.CSVDelimiter);
+      } else if (this.extension === "jsonl") {
+        headers = Object.keys(this.headersString);
+      }
+      return headers;
     },
     missingHeaders() {
       return this.mandatoryHeaders.filter(
@@ -434,6 +440,21 @@ export default {
             values: listValues,
           });
         }
+      } else if (this.extension.toLowerCase() === "jsonl") {
+        let tmpVH = {};
+        for (let i = 0; i < this.valuesString.length; i++) {
+          for (let header in this.valuesString[i]) {
+            if (header in tmpVH) {
+              tmpVH[header].push(this.valuesString[i][header]);
+            } else {
+              tmpVH[header] = [this.valuesString[i][header]];
+            }
+          }
+        }
+        for (let header in tmpVH) {
+          valuesAndHeaders.push({ name: header, values: tmpVH[header] });
+        }
+        console.log(valuesAndHeaders);
       } else {
         console.log("JSONL not supported (yet) for this feature");
       }
@@ -609,7 +630,7 @@ export default {
       formData.append("context", this.fileName);
       formData.append("total_file_size", this.form.file.size);
       formData.append("sketch_id", this.$store.state.sketch.id);
-      if (this.extension === "csv") {
+      if (this.extension === "csv" || this.extension === "jsonl") {
         let hMapping = JSON.stringify(this.headersMapping);
         formData.append("headersMapping", hMapping);
         formData.append("delimiter", this.CSVDelimiter);
@@ -642,7 +663,7 @@ export default {
       if (!allowedExtensions.includes(this.extension)) {
         this.error.push("Please select a file with a valid extension");
       }
-      if (this.extension === "csv") {
+      if (this.extension === "csv" || this.extension === "jsonl") {
         // 1. check if mapping is completed, i.e., if the user set all the mandatory headers
         if (this.headersMapping.length !== this.missingHeaders.length) {
           this.error.push(
@@ -679,6 +700,8 @@ export default {
       /* 3. Manage CSV missing headers */
       if (this.extension === "csv") {
         this.extractCSVHeader();
+      } else if (this.extension === "jsonl") {
+        this.extractJSONLHeader();
       } else {
         this.validateFile();
       }
@@ -700,6 +723,24 @@ export default {
           vueJS.valuesString = data
             .split("\n")
             .slice(1, vueJS.staticNumberRows + 1);
+          vueJS.validateFile();
+        }
+      };
+    },
+    extractJSONLHeader: function () {
+      let reader = new FileReader();
+      let file = document.getElementById("datafile").files[0];
+      let vueJS = this;
+      reader.readAsText(file.slice(0, 10000));
+      reader.onloadend = function (e) {
+        if (e.target.readyState === FileReader.DONE) {
+          /* 3a. Extract the headers from the CSV */
+          let data = e.target.result;
+          vueJS.headersString = JSON.parse(data.split("\n")[0]);
+          vueJS.valuesString = data
+            .split("\n")
+            .slice(0, vueJS.staticNumberRows)
+            .map((x) => JSON.parse(x));
           vueJS.validateFile();
         }
       };
