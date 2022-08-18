@@ -263,7 +263,12 @@ limitations under the License.
             <hr />
           </div>
 
-          <!-- CSV delimiter selection: the program will parse the file according to this choice -->
+          <!--
+
+            CSV delimiter selection: the program will parse 
+            the file according tothis choice
+          
+          -->
           <div v-if="extension==='csv'">
             <label class="label">CSV Separator</label>
             <div class="control" v-for="(v, key) in delimitersList" :key="key">
@@ -394,7 +399,10 @@ export default {
       );
     },
     extension() {
-      return this.fileName.split(".")[1];
+      let extension = this.fileName.split(".")[1]
+      console.log(extension)
+      if(extension)
+        return extension.toLowerCase()
     },
     numberRows() {
       if (this.extension === "csv") {
@@ -428,7 +436,7 @@ export default {
        *  - the value is an array containing the values of that column
        */
       let valuesAndHeaders = {};
-      if (this.extension.toLowerCase() === "csv") {
+      if (this.extension === "csv") {
         let values = this.valuesString.map((x) => x.split(this.CSVDelimiter));
         /**
          * values is an array of array (matrix)
@@ -455,7 +463,7 @@ export default {
           }
         }
       } else {
-        console.log(
+        console.error(
           this.extension + " extension not supported for this feature"
         );
       }
@@ -626,7 +634,7 @@ export default {
       formData.append("context", this.fileName);
       formData.append("total_file_size", this.form.file.size);
       formData.append("sketch_id", this.$store.state.sketch.id);
-      if (["csv", "jsonl"].includes(this.extension.toLowerCase())) {
+      if (["csv", "jsonl"].includes(this.extension)) {
         let hMapping = JSON.stringify(this.headersMapping);
         formData.append("headersMapping", hMapping);
         formData.append("delimiter", this.CSVDelimiter);
@@ -657,9 +665,10 @@ export default {
       }
       let allowedExtensions = ["csv", "jsonl", "plaso"];
       if (!allowedExtensions.includes(this.extension)) {
-        this.error.push("Please select a file with a valid extension: " + allowedExtensions.toString());
+        this.error.push("Please select a file with a valid extension: " + allowedExtensions.toString()
+        );
       }
-      if (["csv", "jsonl"].includes(this.extension.toLowerCase())) {
+      if (["csv", "jsonl"].includes(this.extension)) {
         // 1. check if mapping is completed, i.e., if the user set all the mandatory headers
         if (this.headersMapping.length !== this.missingHeaders.length) {
           this.error.push(
@@ -732,44 +741,54 @@ export default {
         if (e.target.readyState === FileReader.DONE) {
           /* 3a. Extract the headers from the CSV */
           let data = e.target.result;
-          let isText = false;
-          let separator = '"';
-          let curlyBrackets = [];
-          let jsonObj = [];
 
           // Algorithm to extract the JSON first lines
-          for (let i = 0; i < data.length; i++) {
-            let c = data[i];
-            if (isText) {
-              if (c === separator) isText = false;
-              continue;
-            } else {
-              if (c === "{") {
-                curlyBrackets.push(i);
-              } else if (c === "}") {
-                let index = curlyBrackets.pop();
-                if (curlyBrackets.length === 0) {
-                  jsonObj.push(data.slice(index, i + 1));
-                  if (jsonObj.length >= vueJS.staticNumberRows) {
-                    break;
-                  }
-                }
-              } else if (c === "'") {
-                separator = "'";
-                isText = true;
-              } else if (c === "'") {
-                separator = '"';
-                isText = true;
-              }
-            }
-          }
-          if (jsonObj.length === 0) {
-            vueJS.error.push("Cannot parse JSON FILE");
-            return;
-          }
+          
+          // let isText = false;
+          // let separator = '"';
+          // let curlyBrackets = [];
+          // let jsonObj = [];
+
+          // for (let i = 0; i < data.length; i++) {
+          //   let c = data[i];
+          //   if (isText) {
+          //     if (c === separator) isText = false;
+          //     continue;
+          //   } else {
+          //     if (c === "{") {
+          //       curlyBrackets.push(i);
+          //     } else if (c === "}") {
+          //       let index = curlyBrackets.pop();
+          //       if (curlyBrackets.length === 0) {
+          //         jsonObj.push(data.slice(index, i + 1));
+          //         if (jsonObj.length >= vueJS.staticNumberRows) {
+          //           break;
+          //         }
+          //       }
+          //     } else if (c === "'") {
+          //       separator = "'";
+          //       isText = true;
+          //     } else if (c === "'") {
+          //       separator = '"';
+          //       isText = true;
+          //     }
+          //   }
+          // }
+
+          // if (jsonObj.length === 0) {
+          //   vueJS.error.push("Cannot parse JSON FILE");
+          //   return;
+          // }
+
+
+          // instruction to parse JSONL: https://dbconvert.com/blog/json-lines-data-stream/
+          // according to this documentation, "It doesn’t require custom parsers. Just read a line, parse as JSON, read a line, parse as JSON… and so on."  
+
+          let rows = data.split("\n")
+          let i = Math.min(vueJS.staticNumberRows, rows.length)
           try {
-            vueJS.headersString = JSON.parse(jsonObj[0]);
-            vueJS.valuesString = jsonObj.map((x) => JSON.parse(x));
+            vueJS.headersString = JSON.parse(rows[0]);
+            vueJS.valuesString = rows.slice(0,i).map((x) => JSON.parse(x));
             vueJS.validateFile();
           } catch (objError) {
             let error = objError.message;
