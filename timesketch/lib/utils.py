@@ -177,18 +177,19 @@ def check_mapping_errors(headers, headers_mapping):
         if mapping["target"] in headers:
             raise RuntimeError(
                 "Headers mapping is wrong.\n"
-                "Mapping done only if the mandatory header is missing")
+                "Mapping done only if the mandatory header is missing"
+            )
         if mapping["source"]:
             # 3. Check if any of the headers specified in headers mapping
             # is in the headers list
             for source in mapping["source"]:
                 if source not in headers:
                     raise RuntimeError(
-                    f"Value specified in the headers mapping not found in the CSV\n"
-                    f"Headers mapping: {', '.join(mapping['source'])}\n"
-                    f"Sources column/s: {source}\n"
-                    f"All Headers: {', '.join(headers)}"
-                )
+                        f"Value specified in the headers mapping not found in the CSV\n"
+                        f"Headers mapping: {', '.join(mapping['source'])}\n"
+                        f"Sources column/s: {source}\n"
+                        f"All Headers: {', '.join(headers)}"
+                    )
 
             # Update the headers list that we will substitute/rename
             # we do this check only over the header column that will be renamed,
@@ -214,7 +215,7 @@ def check_mapping_errors(headers, headers_mapping):
 
 
 def rename_csv_headers(chunk, headers_mapping):
-    """"Rename the headers of the dataframe
+    """ "Rename the headers of the dataframe
 
     Args:
         chunk: dataframe to be modified
@@ -227,7 +228,7 @@ def rename_csv_headers(chunk, headers_mapping):
     """
     headers_mapping.sort(
         key=lambda x: len(x["source"]) if x["source"] else 0, reverse=True
-        )
+    )
     for mapping in headers_mapping:
         if not mapping["source"]:
             # create new column with a given default value
@@ -236,19 +237,19 @@ def rename_csv_headers(chunk, headers_mapping):
             # concatanete multiple source headers into a new one
             chunk[mapping["target"]] = ""
             for column in mapping["source"]:
-                chunk[mapping["target"]] += column +":"+ chunk[column].map(str) +" | "
+                chunk[mapping["target"]] += (
+                    column + ":" + chunk[column].map(str) + " | "
+                )
         else:
             # just rename the header
             chunk.rename(
-                columns={mapping["source"][0]: mapping["target"]}, inplace=True)
+                columns={mapping["source"][0]: mapping["target"]}, inplace=True
+            )
     return chunk
 
 
 def read_and_validate_csv(
-    file_handle,
-    delimiter=",",
-    mandatory_fields=None,
-    headers_mapping=None
+    file_handle, delimiter=",", mandatory_fields=None, headers_mapping=None
 ):
     """Generator for reading a CSV file.
 
@@ -312,8 +313,7 @@ def read_and_validate_csv(
                             idx * reader.chunksize + num_chunk_rows,
                         )
                     )
-                chunk["timestamp"] = chunk["datetime"].dt.strftime(
-                    "%s%f").astype(int)
+                chunk["timestamp"] = chunk["datetime"].dt.strftime("%s%f").astype(int)
                 chunk["datetime"] = (
                     chunk["datetime"].apply(Timestamp.isoformat).astype(str)
                 )
@@ -321,8 +321,7 @@ def read_and_validate_csv(
                 logger.warning(
                     "Rows {0} to {1} skipped due to malformed "
                     "datetime values ".format(
-                        idx * reader.chunksize, idx *
-                        reader.chunksize + chunk.shape[0]
+                        idx * reader.chunksize, idx * reader.chunksize + chunk.shape[0]
                     )
                 )
                 continue
@@ -351,13 +350,9 @@ def read_and_validate_redline(file_handle):
     """
 
     csv.register_dialect(
-        "redlineDialect",
-        delimiter=",",
-        quoting=csv.QUOTE_ALL,
-        skipinitialspace=True
+        "redlineDialect", delimiter=",", quoting=csv.QUOTE_ALL, skipinitialspace=True
     )
-    reader = pandas.read_csv(file_handle, delimiter=",",
-                             dialect="redlineDialect")
+    reader = pandas.read_csv(file_handle, delimiter=",", dialect="redlineDialect")
 
     _validate_csv_fields(REDLINE_FIELDS, reader)
     for row in reader:
@@ -382,7 +377,7 @@ def read_and_validate_redline(file_handle):
         yield row_to_yield
 
 
-def rename_jsonl_headers(linedict, headers_mapping):
+def rename_jsonl_headers(linedict, headers_mapping, lineno):
     """Rename the headers of the dictionary
 
     Args:
@@ -391,24 +386,24 @@ def rename_jsonl_headers(linedict, headers_mapping):
                          (i) target header we want to insert [key=target],
                          (ii) sources header we want to rename/combine [key=source],
                          (iii) def. value if we add a new column [key=default_value]
+        lineno: line of the JSONL file
 
     Returns: the dictionary with renamed headers
 
 
     """
     headers_mapping.sort(
-        key=lambda x: len(x["source"]) if x["source"] else 0,
-        reverse=True
-        )
-    
+        key=lambda x: len(x["source"]) if x["source"] else 0, reverse=True
+    )
     ld_keys = linedict.keys()
+
+    # sanity check of the headers_mapping
+    check_mapping_errors(ld_keys, headers_mapping)
+
     for mapping in headers_mapping:
         if mapping["target"] not in ld_keys:
-            # 1. rename header
-            # 1.1 source header in ld_keys?
-            # 2. combine headers
-            # 3. create new entry with the default value
-            if mapping["source"]: 
+            if mapping["source"]:
+                # mapping["source"] is not None
                 if len(mapping["source"]) == 1:
                     # 1. rename header
                     if mapping["source"][0] in ld_keys:
@@ -437,7 +432,10 @@ def rename_jsonl_headers(linedict, headers_mapping):
                 linedict[mapping["target"]] = mapping["default_value"]
     return linedict
 
-def read_and_validate_jsonl(file_handle, delimiter=None, headers_mapping=None):  # pylint: disable=unused-argument
+
+def read_and_validate_jsonl(
+    file_handle, delimiter=None, headers_mapping=None
+):  # pylint: disable=unused-argument
     """Generator for reading a JSONL (json lines) file.
 
     Args:
@@ -463,12 +461,8 @@ def read_and_validate_jsonl(file_handle, delimiter=None, headers_mapping=None): 
         try:
             linedict = json.loads(line)
             ld_keys = linedict.keys()
-            
-            
-            # new code here:
             if headers_mapping:
-                linedict = rename_jsonl_headers(linedict, headers_mapping)
-                            
+                linedict = rename_jsonl_headers(linedict, headers_mapping, lineno)
             if "datetime" not in ld_keys and "timestamp" in ld_keys:
                 epoch = int(str(linedict["timestamp"])[:10])
                 dt = datetime.datetime.fromtimestamp(epoch)
@@ -476,10 +470,16 @@ def read_and_validate_jsonl(file_handle, delimiter=None, headers_mapping=None): 
             if "timestamp" not in ld_keys and "datetime" in ld_keys:
                 try:
                     linedict["timestamp"] = int(
-                        parser.parse(linedict["datetime"]
-                                     ).timestamp() * 1000000
+                        parser.parse(linedict["datetime"]).timestamp() * 1000000
                     )
-                except parser.TypeError:
+                except TypeError as e:
+                    logger.error(
+                        "Unable to parse timestamp, skipping line "
+                        "{0:d}".format(lineno),
+                        exc_info=True,
+                    )
+                    continue
+                except parser.ParserError:
                     logger.error(
                         "Unable to parse timestamp, skipping line "
                         "{0:d}".format(lineno),
@@ -493,18 +493,16 @@ def read_and_validate_jsonl(file_handle, delimiter=None, headers_mapping=None): 
                     f"Missing field(s) at line {lineno}: {','.join(missing_fields)}\n"
                     f"Line: {linedict}\n"
                     f"Mapping: {headers_mapping}"
-                    )     
+                )
 
             if "tag" in linedict:
-                linedict["tag"] = [
-                    x for x in _parse_tag_field(linedict["tag"]) if x]
+                linedict["tag"] = [x for x in _parse_tag_field(linedict["tag"]) if x]
             _scrub_special_tags(linedict)
             yield linedict
 
         except ValueError as e:
             raise errors.DataIngestionError(
-                "Error parsing JSON at line {0:n}: {1:s}".format(
-                    lineno, str(e))
+                "Error parsing JSON at line {0:n}: {1:s}".format(lineno, str(e))
             )
 
 
@@ -555,10 +553,7 @@ def get_validated_indices(indices, sketch):
                         timelines.add(timeline_id)
                         indices.append(index)
 
-                    if (
-                        isinstance(item, str) and
-                        item.lower() == timeline_name.lower()
-                    ):
+                    if isinstance(item, str) and item.lower() == timeline_name.lower():
                         timelines.add(timeline_id)
                         indices.append(index)
 
@@ -581,8 +576,7 @@ def send_email(subject, body, to_username, use_html=False):
     email_enabled = current_app.config.get("ENABLE_EMAIL_NOTIFICATIONS")
     email_domain = current_app.config.get("EMAIL_DOMAIN")
     email_smtp_server = current_app.config.get("EMAIL_SMTP_SERVER")
-    email_from_user = current_app.config.get(
-        "EMAIL_FROM_ADDRESS", "timesketch")
+    email_from_user = current_app.config.get("EMAIL_FROM_ADDRESS", "timesketch")
     email_user_whitelist = current_app.config.get("EMAIL_USER_WHITELIST", [])
 
     if not email_enabled:
