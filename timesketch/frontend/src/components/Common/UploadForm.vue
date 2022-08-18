@@ -41,7 +41,7 @@ limitations under the License.
       </div>
 
       <div class="field">
-        <div v-if="['csv', 'json', 'jsonl'].includes(extension)">
+        <div v-if="['csv', 'jsonl'].includes(extension)">
           <hr />
 
           <!-- List of button: showHelper, showPreview, addColumnsToPreview -->
@@ -264,16 +264,18 @@ limitations under the License.
           </div>
 
           <!-- CSV delimiter selection: the program will parse the file according to this choice -->
-          <label class="label">CSV Separator</label>
-          <div class="control" v-for="(v, key) in delimitersList" :key="key">
-            <input
-              type="radio"
-              name="CSVDelimiter"
-              :value="v"
-              v-model="CSVDelimiter"
-              @change="changeCSVDelimiter"
-            />
-            {{ key }} ({{ v }})
+          <div v-if="extension==='csv'">
+            <label class="label">CSV Separator</label>
+            <div class="control" v-for="(v, key) in delimitersList" :key="key">
+              <input
+                type="radio"
+                name="CSVDelimiter"
+                :value="v"
+                v-model="CSVDelimiter"
+                @change="changeCSVDelimiter"
+              />
+              {{ key }} ({{ v }})
+            </div>
           </div>
         </div>
       </div>
@@ -381,7 +383,7 @@ export default {
       let headers = [];
       if (this.extension === "csv") {
         headers = this.headersString.split(this.CSVDelimiter);
-      } else if (this.extension.startsWith("json")) {
+      } else if (this.extension === "jsonl") {
         headers = Object.keys(this.headersString);
       }
       return headers;
@@ -398,7 +400,7 @@ export default {
       if (this.extension === "csv") {
         let n = this.valuesString.indexOf("");
         return n < 0 ? this.staticNumberRows : n;
-      } else if (["json", "jsonl"].includes(this.extension)) {
+      } else if (this.extension === "jsonl") {
         return this.valuesString.length;
       } else {
         return 0;
@@ -442,7 +444,7 @@ export default {
           }
           valuesAndHeaders[this.headers[i]] = listValues;
         }
-      } else if (["json", "jsonl"].includes(this.extension.toLowerCase())) {
+      } else if (this.extension === "jsonl") {
         for (let i = 0; i < this.valuesString.length; i++) {
           for (let header in this.valuesString[i]) {
             if (header in valuesAndHeaders) {
@@ -624,7 +626,7 @@ export default {
       formData.append("context", this.fileName);
       formData.append("total_file_size", this.form.file.size);
       formData.append("sketch_id", this.$store.state.sketch.id);
-      if (["csv", "json", "jsonl"].includes(this.extension.toLowerCase())) {
+      if (["csv", "jsonl"].includes(this.extension.toLowerCase())) {
         let hMapping = JSON.stringify(this.headersMapping);
         formData.append("headersMapping", hMapping);
         formData.append("delimiter", this.CSVDelimiter);
@@ -653,11 +655,11 @@ export default {
       if (this.form.file.size <= 0) {
         this.error.push("Please select a non empty file");
       }
-      let allowedExtensions = ["csv", "json", "jsonl", "plaso"];
+      let allowedExtensions = ["csv", "jsonl", "plaso"];
       if (!allowedExtensions.includes(this.extension)) {
-        this.error.push("Please select a file with a valid extension");
+        this.error.push("Please select a file with a valid extension: " + allowedExtensions.toString());
       }
-      if (["csv", "json", "jsonl"].includes(this.extension.toLowerCase())) {
+      if (["csv", "jsonl"].includes(this.extension.toLowerCase())) {
         // 1. check if mapping is completed, i.e., if the user set all the mandatory headers
         if (this.headersMapping.length !== this.missingHeaders.length) {
           this.error.push(
@@ -694,7 +696,7 @@ export default {
       /* 3. Manage CSV missing headers */
       if (this.extension === "csv") {
         this.extractCSVHeader();
-      } else if (this.extension.startsWith("json")) {
+      } else if (this.extension === "jsonl") {
         this.extractJSONLHeader();
       } else {
         this.validateFile();

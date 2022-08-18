@@ -408,6 +408,10 @@ def read_and_validate_jsonl(file_handle, delimiter=None, headers_mapping=None): 
 
             # new code here:
             if headers_mapping:
+                headers_mapping.sort(
+                        key=lambda x: len(x["source"]) if x["source"] else 0,
+                        reverse=True
+                        )
                 for mapping in headers_mapping:
                     if mapping["target"] not in ld_keys:
                         # 1. rename header
@@ -463,10 +467,10 @@ def read_and_validate_jsonl(file_handle, delimiter=None, headers_mapping=None): 
             missing_fields = [x for x in mandatory_fields if x not in linedict]
             if missing_fields:
                 raise RuntimeError(
-                    "Missing field(s) at line {0:n}: {1:s}".format(
-                        lineno, ",".join(missing_fields)
-                    )
-                )
+                    f"Missing field(s) at line {lineno}: {','.join(missing_fields)}\n"
+                    f"Line: {linedict}\n"
+                    f"Mapping: {headers_mapping}"
+                    )     
 
             if "tag" in linedict:
                 linedict["tag"] = [
