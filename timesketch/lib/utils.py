@@ -213,7 +213,7 @@ def check_mapping_errors(headers, headers_mapping):
         )
 
 
-def rename_headers(chunk, headers_mapping):
+def rename_csv_headers(chunk, headers_mapping):
     """"Rename the headers of the dataframe
 
     Args:
@@ -284,7 +284,7 @@ def read_and_validate_csv(
         for idx, chunk in enumerate(reader):
             if headers_mapping:
                 # rename colunms according to the mapping
-                chunk = rename_headers(chunk, headers_mapping)
+                chunk = rename_csv_headers(chunk, headers_mapping)
 
             skipped_rows = chunk[chunk["datetime"].isnull()]
             if not skipped_rows.empty:
@@ -382,7 +382,7 @@ def read_and_validate_redline(file_handle):
         yield row_to_yield
 
 
-def read_and_validate_jsonl(file_handle, **kwargs):  # pylint: disable=unused-argument
+def read_and_validate_jsonl(file_handle, delimiter=None, headers_mapping=None):  # pylint: disable=unused-argument
     """Generator for reading a JSONL (json lines) file.
 
     Args:
@@ -405,6 +405,43 @@ def read_and_validate_jsonl(file_handle, **kwargs):  # pylint: disable=unused-ar
         try:
             linedict = json.loads(line)
             ld_keys = linedict.keys()
+
+            # new code here:
+            if headers_mapping:
+                for mapping in headers_mapping:
+                    if mapping["target"] not in ld_keys:
+                        # 1. rename header
+                        # 1.1 source header in ld_keys?
+                        # 2. combine headers
+                        # 3. create new entry with the default value
+                        if mapping["source"]: 
+                            if len(mapping["source"]) == 1:
+                                # 1. rename header
+                                if mapping["source"][0] in ld_keys:
+                                    linedict[mapping["target"]] = linedict.pop(mapping["source"][0])
+                                else:
+                                    raise RuntimeError(
+                                        f"Source mapping {mapping['source'][0]} not found in JSON\n"
+                                        f"JSON line:\n{linedict}\n"
+                                        f"Line no: {lineno}"
+                                    )
+                            else:
+                                # 2. combine headers
+                                linedict[mapping["target"]] = ""
+                                for source in mapping["source"]:
+                                    if source in ld_keys:
+                                        linedict[mapping["target"]] += f"{source} : "
+                                        linedict[mapping["target"]] += f"{linedict[source]} |"
+                                    else:
+                                        raise RuntimeError(
+                                            f"Source mapping {source} not found in JSON\n"
+                                            f"JSON line:\n{linedict}\n"
+                                            f"Line no: {lineno}"
+                                        )
+                        else:
+                            # 3. create new entry with the default value
+                            linedict[mapping["target"]] = mapping["default_value"]
+                            
             if "datetime" not in ld_keys and "timestamp" in ld_keys:
                 epoch = int(str(linedict["timestamp"])[:10])
                 dt = datetime.datetime.fromtimestamp(epoch)

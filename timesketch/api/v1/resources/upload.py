@@ -298,7 +298,7 @@ class UploadFileResource(resources.ResourceMixin, Resource):
             status_code=HTTP_STATUS_CODE_CREATED,
             meta=meta)
 
-    def _upload_events(self, events, form, sketch, index_name):
+    def _upload_events(self, events, form, sketch, index_name, headers_mapping=None):
         """Upload a file like object.
 
         Args:
@@ -324,6 +324,7 @@ class UploadFileResource(resources.ResourceMixin, Resource):
             form=form,
             data_label=data_label,
             enable_stream=form.get("enable_stream", False),
+            headers_mapping=headers_mapping
         )
 
     def _upload_file(
@@ -546,5 +547,9 @@ class UploadFileResource(resources.ResourceMixin, Resource):
             )
 
         return self._upload_events(
-            events=events, form=form, sketch=sketch, index_name=index_name
+            events=events,
+            form=form,
+            sketch=sketch,
+            index_name=index_name,
+            headers_mapping=headers_mapping
         )

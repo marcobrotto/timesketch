@@ -292,7 +292,8 @@ def build_index_pipeline(
             timeline_name,
             index_name,
             file_extension,
-            timeline_id
+            timeline_id,
+            headers_mapping
         )
 
     # TODO: Check if a scenario is set or an investigative question
