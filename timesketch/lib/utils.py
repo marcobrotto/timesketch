@@ -215,7 +215,7 @@ def check_mapping_errors(headers, headers_mapping):
 
 
 def rename_csv_headers(chunk, headers_mapping):
-    """ "Rename the headers of the dataframe
+    """ "Rename/Add/Remove the headers of the dataframe
 
     Args:
         chunk: dataframe to be modified
@@ -230,6 +230,10 @@ def rename_csv_headers(chunk, headers_mapping):
         key=lambda x: len(x["source"]) if x["source"] else 0, reverse=True
     )
     for mapping in headers_mapping:
+        # drop column starting with underscore
+        if not mapping["target"]:
+            chunk = chunk.drop(mapping["source"], axis=1)
+            continue
         if not mapping["source"]:
             # create new column with a given default value
             chunk[mapping["target"]] = mapping["default_value"]
@@ -401,6 +405,10 @@ def rename_jsonl_headers(linedict, headers_mapping, lineno):
     check_mapping_errors(ld_keys, headers_mapping)
 
     for mapping in headers_mapping:
+        if not mapping["target"]:
+            [linedict.pop(source) for source in mapping["source"]]
+            continue
+
         if mapping["target"] not in ld_keys:
             if mapping["source"]:
                 # mapping["source"] is not None

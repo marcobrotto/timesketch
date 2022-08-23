@@ -217,14 +217,8 @@ limitations under the License.
               >
                 <option selected disabled>-</option>
                 <option>Create new header</option>
-                <option v-for="h in headers" :value="h" :key="h">
-                  <div
-                    v-if="
-                      !mandatoryHeaders.map((header) => header.name).includes(h)
-                    "
-                  >
-                    {{ h }}
-                  </div>
+                <option v-for="h in listedHeaders" :value="h" :key="h">
+                  {{ h }}
                 </option>
               </select>
             </div>
@@ -248,7 +242,7 @@ limitations under the License.
                   overflow: auto;
                 "
               >
-                <li v-for="h in headers" :key="h">
+                <li v-for="h in listedHeaders" :key="h">
                   <input
                     id="chk"
                     type="checkbox"
@@ -305,6 +299,20 @@ limitations under the License.
           />
         </div>
         <hr />
+      </div>
+
+
+      <div v-if="badHeaders.size > 0">
+        <span>
+          <article class="message is-warning mb-0">
+            <div class="message-body">
+              {{badHeaders.size}} header/s start with "underscore": {{ Array.from(badHeaders).join(', ') }}.
+              <br />
+              They will be removed in Timesketch.
+            </div>
+          </article>
+        </span>
+        <br />
       </div>
 
       <div class="error" v-if="!error.length">
@@ -386,12 +394,25 @@ export default {
   computed: {
     headers() {
       let headers = [];
+      this.headersMapping = []
       if (this.extension === "csv") {
         headers = this.headersString.split(this.CSVDelimiter);
       } else if (this.extension === "jsonl") {
         headers = Object.keys(this.headersString);
       }
       return headers;
+    },
+    badHeaders() { // headers starts with underscore ( _ )
+      let badHeaders = new Set()
+      for(let i = 0; i < this.headers.length; i ++){
+        if(this.headers[i].startsWith("_"))
+          badHeaders.add(this.headers[i])
+      }          
+      return badHeaders
+    },
+    listedHeaders() {
+      let mandatoryHeaders = this.mandatoryHeaders.map((header) => header.name)
+      return this.headers.filter(x=> !(x.startsWith("_") || mandatoryHeaders.includes(x)));
     },
     missingHeaders() {
       return this.mandatoryHeaders.filter(
@@ -400,14 +421,13 @@ export default {
     },
     extension() {
       let extension = this.fileName.split(".")[1];
-      console.log(extension);
       if (extension) return extension.toLowerCase();
       else return null;
     },
     numberRows() {
       if (this.extension === "csv") {
         let n = this.valuesString.indexOf("");
-        return n < 0 ? this.staticNumberRows : n;
+        return n < 0 ? this.valuesString.length : n;
       } else if (this.extension === "jsonl") {
         return this.valuesString.length;
       } else {
@@ -635,6 +655,14 @@ export default {
       formData.append("total_file_size", this.form.file.size);
       formData.append("sketch_id", this.$store.state.sketch.id);
       if (["csv", "jsonl"].includes(this.extension)) {
+
+        // add headers to be removed
+        if(this.badHeaders.size > 0)
+          this.headersMapping.push({
+                "source" : [...this.badHeaders],
+                "target" : null,
+                "default_value" : null
+              })
         let hMapping = JSON.stringify(this.headersMapping);
         formData.append("headersMapping", hMapping);
         formData.append("delimiter", this.CSVDelimiter);
