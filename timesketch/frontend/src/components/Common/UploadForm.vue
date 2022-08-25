@@ -40,6 +40,17 @@ limitations under the License.
         </div>
       </div>
 
+      <!-- Error lists -->
+      <div v-if="error.length > 0">
+        <span v-for="(errorMessage, index) in error" :key="index">
+          <article class="message is-danger mb-0">
+            <div class="message-body">
+              {{ errorMessage }}
+            </div>
+          </article>
+        </span>
+      </div>
+
       <div class="field">
         <div v-if="extension === 'csv'">
           <hr />
@@ -48,73 +59,13 @@ limitations under the License.
           <button type="button" class="button is-success" @click="showHelper">
             {{ showHelperFlag ? "Hide Helper" : "Show Helper" }}</button
           >&emsp;
-          <button type="button" class="button is-success" @click="showPreview">
-            {{ showPreviewFlag ? "Hide preview" : "Show preview" }}</button
-          >&emsp;
           <button
-            v-if="showPreviewFlag"
             type="button"
             class="button is-success"
             @click="showAddColumn"
           >
             {{ showAddColumnFlag ? "Hide colums" : "Add Columns" }}</button
           ><br /><br />
-
-          <!-- Dynamically generation of the preview of the CSV file -->
-          <div v-if="showPreviewFlag">
-            <span>
-              <article class="message is-info mb-0">
-                <div class="message-body">
-                  The columns shown in the preview are only a representation of
-                  what will be uploaded on the server. Adding or removing
-                  columns using the "Add columns" button does not affect what
-                  will be uploaded on the server.
-                </div>
-              </article>
-            </span>
-            <ul
-              v-if="showAddColumnFlag"
-              style="
-                list-style: none;
-                height: 100px;
-                width: 100%;
-                overflow: auto;
-              "
-            >
-              <li v-for="header in allHeaders" :key="header">
-                <input
-                  type="checkbox"
-                  :value="header"
-                  v-model="checkedHeaders"
-                />
-                {{ header }}
-              </li>
-            </ul>
-            <br />
-            <table id="example" class="table is-striped" style="width: 100%">
-              <thead>
-                <tr>
-                  <th
-                    v-for="mandatoryHeader in headersTable"
-                    :key="mandatoryHeader.name"
-                    :style="mandatoryHeader.color"
-                  >
-                    {{ mandatoryHeader.name }}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="i in numberRows" :key="i">
-                  <td
-                    v-for="mandatoryHeader in headersTable"
-                    :key="mandatoryHeader.name"
-                  >
-                    {{ mandatoryHeader.values[i - 1] }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
 
           <!-- Helper menu -->
           <div v-if="showHelperFlag">
@@ -177,6 +128,92 @@ limitations under the License.
               </div>
             </section>
           </div>
+
+          <!-- Dynamically generation of the preview of the CSV file -->
+            <ul
+              v-if="showAddColumnFlag"
+              style="
+                list-style: none;
+                height: 100px;
+                width: 100%;
+                overflow: auto;
+              "
+            >
+              <li v-for="header in allHeaders" :key="header">
+                <input
+                  type="checkbox"
+                  :value="header"
+                  v-model="checkedHeaders"
+                />
+                {{ header }}
+              </li>
+            </ul>
+            <br />
+            <table id="example" class="table is-striped" style="width: 100%">
+              <thead>
+                <tr>
+                  <th
+                    v-for="mandatoryHeader in headersTable"
+                    :key="mandatoryHeader.name"
+                    :style="mandatoryHeader.color"
+                  >
+                    <span
+                      class="tag is-light is-large is-light"
+                    >
+                      <label>{{ mandatoryHeader.name }}</label>
+                    </span>
+                    &emsp;
+
+                    <div class="select is-link">
+                      <select
+                        :name="mandatoryHeader.name"
+                        :id="mandatoryHeader.name"
+                        @change="
+                          changeHeaderMapping(
+                            $event.target.options[$event.target.options.selectedIndex]
+                              .text,
+                            mandatoryHeader.name
+                          )
+                        "
+                      >
+                        <option selected disabled>-</option>
+                        <option is-active>Create new header</option>
+                        <option v-for="h in headers" :value="h" :key="h">
+                          <div
+                            v-if="
+                              !mandatoryHeaders.map((header) => mandatoryHeader.name).includes(h)
+                            "
+                          >
+                            {{ h }}
+                          </div>
+                        </option>
+                      </select>
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="i in numberRows" :key="i">
+                  <td
+                    v-for="mandatoryHeader in headersTable"
+                    :key="mandatoryHeader.name"
+                  >
+                    {{ mandatoryHeader.values[i - 1] }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <span>
+              <article class="message is-info mb-0">
+                <div class="message-body">
+                  The columns shown in the preview are only a representation of
+                  what will be uploaded on the server. Adding or removing
+                  columns using the "Add columns" button does not affect what
+                  will be uploaded on the server.
+                </div>
+              </article>
+            </span>
           <hr
             style="
               height: 2px;
@@ -306,16 +343,6 @@ limitations under the License.
             <input class="button is-success" type="submit" value="Upload" />
           </div>
         </div>
-      </div>
-      <!-- Error lists -->
-      <div v-else>
-        <span v-for="(errorMessage, index) in error" :key="index">
-          <article class="message is-danger mb-0">
-            <div class="message-body">
-              {{ errorMessage }}
-            </div>
-          </article>
-        </span>
       </div>
     </form>
     <br />
