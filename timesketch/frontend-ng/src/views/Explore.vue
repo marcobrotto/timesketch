@@ -144,7 +144,7 @@ limitations under the License.
             <template v-slot:activator="{ on, attrs }">
               <v-chip outlined v-bind="attrs" v-on="on">
                 <v-icon left small> mdi-clock-plus-outline </v-icon>
-                Add timefilter
+                Timefilter
               </v-chip>
             </template>
 
@@ -152,34 +152,6 @@ limitations under the License.
           </v-menu>
         </span>
       </v-chip-group>
-
-      <!-- TODO: Move this control to the timeline picker -->
-      <!-- https://github.com/google/timesketch/issues/2338 -->
-      <!-- Add manual event
-      <span>
-        <v-menu
-          v-model="addManualEvent"
-          offset-y
-          :close-on-content-click="false"
-          :close-on-click="true"
-          content-class="menu-with-gap"
-          allow-overflow
-          style="overflow: visible"
-        >
-          <template v-slot:activator="{ on, attrs }">
-            <v-chip outlined v-bind="attrs" v-on="on">
-              <v-icon left small> mdi-braille </v-icon>
-              Add manual event
-            </v-chip>
-          </template>
-          <ts-add-manual-event
-            app
-            @cancel="addManualEvent = false"
-            :datetimeProp="datetimeManualEvent"
-          ></ts-add-manual-event>
-        </v-menu>
-      </span>
-       -->
 
       <!-- Term filters -->
       <div v-if="filterChips.length">
@@ -199,7 +171,7 @@ limitations under the License.
       <template v-slot:activator="{ on, attrs }">
         <v-chip outlined v-bind="attrs" v-on="on">
           <v-icon left small> mdi-braille </v-icon>
-          Add manual event
+          Manual event
         </v-chip>
       </template>
       <ts-add-manual-event
@@ -516,6 +488,9 @@ limitations under the License.
           </v-btn>
           <!-- Tag menu -->
           <ts-event-tag-menu :event="item"></ts-event-tag-menu>
+          <v-btn small icon @click="addEventBtn(item._source.datetime)">
+            <v-icon>mdi-braille</v-icon>
+          </v-btn>
         </template>
 
         <!-- Generic slot for any field type. Adds tags and emojis to the first column. -->
